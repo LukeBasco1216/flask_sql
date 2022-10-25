@@ -1,0 +1,4 @@
+# or 1=1 , è un sql injection, è un problema perche ti da tutti i row o gli info,
+perche se uno prova a fare login e inietta questo codice confronta cio che ha immesso in tutti i row se ce
+
+sql injection è una vulnerabilità, un punto di debolezza del software che permette ai malintenzionati(hacker) di sfruttarli
