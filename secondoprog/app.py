@@ -7,9 +7,21 @@
 #  una volta effettuata la scelta, l'utente clicca su un bottone che fornisce le info richieste.
 #  Utilizzare bootstrap per l'interfaccia grafica
 
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, Response, redirect
 app = Flask(__name__)
 
+import io
+import contextily
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+from matplotlib.figure import Figure
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import pandas as pd
+import pymssql
+
+
+connection = pymssql.connect(server="213.140.22.237\SQLEXPRESS", user="basco.luke",password="xxx123##",database="basco.luke")
 
 @app.route('/', methods=['GET'])
 def search():
@@ -20,18 +32,80 @@ def scelta():
     servizioscelto = request.args["servizio"]
 
     if servizioscelto == "1servizio":
-        return redirect(url_for('1servizio'))
+        return redirect(url_for('servizio1'))
     elif servizioscelto == "2servizio":
-        return redirect(url_for('2servizio'))
+        return redirect(url_for('servizio2'))
     elif servizioscelto == "3servizio":
-        return redirect(url_for('3servizio'))
+        return redirect(url_for('servizio3'))
     else :
-        return redirect(url_for('4servizio'))
+        return redirect(url_for('servizio4'))
 
-@app.route('/1servizio', methods=['GET'])
-def servzio1():
-    return render_template("1servizio.html")
+@app.route('/servizio1', methods=['GET'])
+def servizio1():
+    global df1
+    query = "select production.categories.category_name, count(*) as tot_prod from production.products inner join production.categories on production.products.category_id = production.categories.category_id group by production.categories.category_name,production.categories.category_id"
+    df1 = pd.read_sql(query,connection)
+    return render_template("1servizio.html", nomicolonne = df1.columns.values, dati = list(df1.values.tolist()))
 
+@app.route('/grafico1', methods=['GET'])
+def grafico1():
+    #  crea la figura
+    fig = plt.figure(figsize=(11,8))
+    #grandezza del grafico
+    fig.set_size_inches(14,9)
+    #  crea gli assi
+    ax = plt.axes()
+
+    x = df1['category_name']
+    y = df1['tot_prod']
+    #  crea le barre
+    #  color = "chocolate" per cambiare il colore delle barre
+    #  dentro le virgolette mettere nome di un colore dalla tabella di cssdegli colori
+    ax.bar(x, y, color="chocolate")
+    #  ruota i label o i nomi dell'asse x
+    fig.autofmt_xdate(rotation=60) 
+    #  crea un titolo nell'asse x
+    ax.set_xlabel("categoria")
+    #  crea un titolo nell'asse y
+    ax.set_ylabel("numero prodotti")
+    #  crea un titolo
+    fig.suptitle("quantita prodotti")
+
+    output = io.BytesIO()
+    FigureCanvas(fig).print_png(output)
+    return Response(output.getvalue(), mimetype='image/png')
+
+@app.route('/servizio2', methods=['GET'])
+def servizio2():
+    global df2
+    # query si scrive in formato string
+    query = "select sales.stores.store_name, count(*) as num_ordini from sales.stores inner join sales.orders on sales.stores.store_id = sales.orders.store_id group by sales.stores.store_name"
+    df2 = pd.read_sql(query,connection)
+    return render_template("2servizio.html", nomicolonne = df2.columns.values, dati = list(df2.values.tolist()))
+
+@app.route('/grafico2', methods=['GET'])
+def grafico2():
+    #  crea la figura
+    fig = plt.figure(figsize=(11,8))
+    #grandezza del grafico
+    fig.set_size_inches(14,9)
+    #  crea gli assi
+    ax = plt.axes()
+    #  crea le barre
+    #  color = "chocolate" per cambiare il colore delle barre
+    #  dentro le virgolette mettere nome di un colore dalla tabella di cssdegli colori
+    ax.barh(df2["store_name"], df2["num_ordini"], color="chocolate")
+    #  ruota i label o i nomi dell'asse x
+    fig.autofmt_xdate(rotation=60) 
+    #  crea un titolo nell'asse x
+    ax.set_xlabel("numero orders")
+    #  crea un titolo nell'asse y
+    ax.set_ylabel("store")
+    #  crea un titolo
+    fig.suptitle("numero ordini")
+    output = io.BytesIO()
+    FigureCanvas(fig).print_png(output)
+    return Response(output.getvalue(), mimetype='image/png')
 
 if __name__ == '__main__':
   app.run(host='0.0.0.0', port=3245, debug=True)
