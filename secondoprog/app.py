@@ -11,7 +11,6 @@ from flask import Flask, render_template, request, redirect, url_for, Response, 
 app = Flask(__name__)
 
 import io
-import contextily
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib
@@ -106,6 +105,46 @@ def grafico2():
     output = io.BytesIO()
     FigureCanvas(fig).print_png(output)
     return Response(output.getvalue(), mimetype='image/png')
+
+@app.route('/servizio3', methods=['GET'])
+def servizio3():
+    global df3
+    # query si scrive in formato string
+    query = "select production.brands.brand_name, count(*) as num_prod from production.brands inner join production.products on production.products.brand_id = production.brands.brand_id group by production.brands.brand_name"
+    df3 = pd.read_sql(query,connection)
+    return render_template("3servizio.html", nomicolonne = df3.columns.values, dati = list(df3.values.tolist()))
+
+@app.route('/grafico3', methods=['GET'])
+def grafico3():
+    plt.rcParams.update({"font.size" : 12})
+
+    fig = plt.figure(figsize=(12,12))
+    ax = plt.axes()
+
+    #  autopct = "%1.1f%%"  ----->    nelle virgolette il primo 1 è la lontananza dei percentuali
+    #  startangle = 90   ------>    per ruotare il grafico
+    #  colors = ["yellow", "red","purple"]    ------->   per colorare il grafico e si alternano
+    #  si scrive con l'= perche possiamo scrivere le funzioni senza ordine
+    ax.pie(df3["num_prod"],labels = df3.brand_name, autopct = "%0.2f%%",startangle = 90, colors = ["lavender", "lightblue","lightgreen"])
+
+    fig.suptitle("quantita prodotti")
+
+    output = io.BytesIO()
+    FigureCanvas(fig).print_png(output)
+    return Response(output.getvalue(), mimetype='image/png')
+
+
+@app.route('/servizio4', methods=['GET'])
+def servizio4():
+    return render_template("input4servizio.html")
+
+@app.route('/var-input', methods=['GET'])
+def inputresponse():
+    global df4
+    variabile = request.args["inputt"]
+    query= f"select * from production.products where product_name like '{variabile}%'" # si mette f(format) all'inizio per avere la possibiltà di mettere una variabile in una stringa {nomedelprodotto}
+    df4 = pd.read_sql(query, connection)
+    return render_template("4servizio.html", nomicolonne = df4.columns.values, dati = list(df4.values.tolist()))
 
 if __name__ == '__main__':
   app.run(host='0.0.0.0', port=3245, debug=True)
