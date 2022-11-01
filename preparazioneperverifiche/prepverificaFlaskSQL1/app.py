@@ -2,8 +2,9 @@
 #  la homepage del sito deve permettere all'utente di sciegliere una fra le seguenti 4 opzioni:
 #  1. i nomi dei prodotti con il brand, in formato tabellare
 #  2. i nomi dei prodotti che hanno uno stock superiore a 10 , sia in formato tabellare e in sotto forma di grafica a barre verticale
-#  3. i nomi dei prodotti che hanno la parola cruiser nel nome , sia in formato tabellare 
+#  3. i nomi dei prodotti che hanno la parola cruiser nel nome , in formato tabellare 
 #  4. i nomi dei prodotti che hanno la parola inserita dall'utente nel nome in formato tabellare 
+#  5. i nomi dei brand contando il numero di prodotti che ha, sia in formato tabellare e in sotto forma di grafica a barre verticale
 #  una volta effettuata la scelta, l'utente clicca su un bottone che fornisce le info richieste.
 #  Utilizzare bootstrap per l'interfaccia grafica
 
@@ -37,14 +38,17 @@ def scelta():
     return redirect(url_for('servizio2'))
   elif servscelto == '3servizio':
     return redirect(url_for('servizio3'))
-  else:
+  elif servscelto == '4servizio':
     return redirect(url_for('servizio4'))
+  else:
+    return redirect(url_for('servizio5'))
 
 
 
 #  1. i nomi dei prodotti con il brand, in formato tabellare
 @app.route('/servizio1', methods=['GET'])
 def servizio1():
+  global df1
   query ='select production.products.product_name, production.brands.brand_name from production.products inner join production.brands on production.products.brand_id = production.brands.brand_id'
   df1 = pd.read_sql(query,connection)
   return render_template("servizio1.html", nomicolonne = df1.columns.values, dati = list(df1.values.tolist()))
@@ -86,9 +90,35 @@ def grafico1():
 
 
 #  3. i nomi dei prodotti che hanno la parola cruiser nel nome 
-@app.route('/', methods=['GET'])
-def search():
-  return render_template("homepage.html") 
+@app.route('/servizio3', methods=['GET'])
+def servizio3():
+  query = "select production.products.product_name from production.products where product_name like '%cruiser%'"
+  df3 = pd.read_sql(query, connection)
+  return render_template("servizio3.html", nomicolonne = df3.columns.values, dati = list(df3.values.tolist())) 
+
+
+#  4. i nomi dei prodotti che hanno la parola inserita dall'utente nel nome
+@app.route('/servizio4', methods=['GET'])
+def servizio4():
+  return render_template("input.html")
+
+@app.route('/input', methods=['GET'])
+def inputt():
+  valoreins = request.args["input"]
+  query = f"select production.products.product_name from production.products where production.products.product_name like '%{valoreins}%'"
+  df4 = pd.read_sql(query, connection)
+  return render_template("servizio4.html", nomicolonne = df4.columns.values, dati = list(df4.values.tolist()))
+
+
+
+#  5. nomi dei brand contando il numero di prodotti che ha
+@app.route('/servizio5', methods=['GET'])
+def servizio5():
+  query = "select production.brands.brand_name, count(*) as totprod from production.products inner join production.brands on production.products.brand_id = production.brands.brand_id group by production.brands.brand_name"
+  df5 = pd.read_sql(query, connection)
+  return render_template("servizio5.html", nomicolonne = df5.columns.values, dati = list(df5.values.tolist()))
+
+
 
 if __name__ == '__main__':
   app.run(host='0.0.0.0', port=3245, debug=True)
